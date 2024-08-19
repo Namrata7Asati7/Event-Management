@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
+from datetime import timedelta
 import sqlite3
 
 app = Flask(__name__)
@@ -18,6 +19,11 @@ def init_db():
 
 init_db()
 
+users = {
+    "test@example.com": "password123"
+}
+
+
 # Home Page - Display all events
 @app.route('/')
 def home():
@@ -27,6 +33,19 @@ def home():
     events = cursor.fetchall()
     conn.close()
     return render_template('home.html', events=events)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        if email in users and users[email] == password:
+            session.permanent = True
+            session['user'] = email
+            return redirect(url_for('create_event'))
+        else:
+            return "Incorrect email or password. Please try again."
+    return render_template('login.html')
 
 # Create Event Page
 @app.route('/create', methods=['GET', 'POST'])
@@ -89,6 +108,12 @@ def delete_event(event_id):
     conn.commit()
     conn.close()
     return redirect(url_for('home'))
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('login'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
